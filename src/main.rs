@@ -1,10 +1,12 @@
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use clap::Parser;
 use k8s_openapi::api::core::v1::Secret;
-use kube::config::KubeConfigOptions;
 use kube::Api;
 use kube::Client;
 use kube::Config;
+use kube::config::KubeConfigOptions;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -24,6 +26,8 @@ pub struct Args {
     pub key: Option<String>,
     #[arg(long, help = "Kubernetes context to use")]
     pub context: Option<String>,
+    #[arg(short, long, help = "Outputs the key/values as JSON")]
+    pub json: bool,
 }
 
 #[tokio::main]
@@ -48,15 +52,25 @@ async fn main() -> Result<()> {
         .filter(|d| !d.is_empty())
         .ok_or_else(|| anyhow::anyhow!("secret '{}' has no data", args.secret_name))?;
 
-    if let Some(key) = &args.key {
-        if let Some(value) = data.get(key.as_str()) {
-            println!("{}", String::from_utf8_lossy(&value.0));
-        } else {
-            anyhow::bail!("key '{}' not found in secret '{}'", key, args.secret_name);
+    let decoded: BTreeMap<&str, String> = match &args.key {
+        Some(key) => {
+            let value = data
+                .get(key.as_str())
+                .ok_or_else(|| anyhow::anyhow!("key '{}' not found in secret '{}'", key, args.secret_name))?;
+            BTreeMap::from([(key.as_str(), String::from_utf8_lossy(&value.0).into_owned())])
         }
+        None => data
+            .iter()
+            .map(|(k, v)| (k.as_str(), String::from_utf8_lossy(&v.0).into_owned()))
+            .collect(),
+    };
+
+    if args.json {
+        println!("{}", serde_json::to_string(&decoded)?);
     } else {
-        data.iter()
-            .for_each(|(k, v)| println!("{}: {}", k, String::from_utf8_lossy(&v.0)));
+        decoded
+            .iter()
+            .for_each(|(k, v)| println!("{}: {}", k, v));
     }
 
     Ok(())
