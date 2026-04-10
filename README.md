@@ -23,6 +23,42 @@ Verify kubectl picks it up:
 kubectl plugin list
 ```
 
+## Shell Completions
+
+This plugin supports shell completions via `clap_complete`. Completions are driven by the `COMPLETE` environment variable.
+
+**Note:** Completions register under the binary name `kubectl-decodesecret`, so you should invoke the binary directly (or use a shell alias/abbreviation) rather than `kubectl decodesecret` for completions to work.
+
+### Fish
+
+Add to `~/.config/fish/config.fish`:
+
+```fish
+COMPLETE=fish kubectl-decodesecret | source
+```
+
+Optionally add an abbreviation for convenience:
+
+```fish
+abbr -a kds kubectl-decodesecret
+```
+
+### Bash
+
+Add to `~/.bashrc`:
+
+```bash
+source <(COMPLETE=bash kubectl-decodesecret)
+```
+
+### Zsh
+
+Add to `~/.zshrc`:
+
+```zsh
+source <(COMPLETE=zsh kubectl-decodesecret)
+```
+
 ## Usage
 
 ```
